@@ -1,10 +1,8 @@
-
 // netlify/functions/listarProdutos.js
 
-// exports.handler é o ponto de entrada da função serverless
 exports.handler = async (event, context) => {
   try {
-    // Assegure-se de ter configurado OMIE_APP_KEY e OMIE_APP_SECRET em variáveis de ambiente no Netlify
+    // Pega as variáveis de ambiente definidas no Netlify
     const appKey = process.env.OMIE_APP_KEY;
     const appSecret = process.env.OMIE_APP_SECRET;
 
@@ -17,7 +15,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Monta o body da requisição de acordo com a doc da Omie
+    // Body para ListarProdutos, pegando 50 registros da página 1
     const requestBody = {
       call: "ListarProdutos",
       param: [
@@ -32,12 +30,10 @@ exports.handler = async (event, context) => {
       app_secret: appSecret
     };
 
-    // Faz a requisição fetch usando a API nativa do node ou node-fetch (no Netlify 18+ já está disponível nativamente)
+    // Faz a requisição para Omie
     const response = await fetch("https://app.omie.com.br/api/v1/geral/produtos/", {
       method: "POST",
-      headers: {
-        "Content-type": "application/json"
-      },
+      headers: { "Content-type": "application/json" },
       body: JSON.stringify(requestBody)
     });
 
@@ -47,10 +43,10 @@ exports.handler = async (event, context) => {
 
     const data = await response.json();
 
-    // Retorna o JSON dos produtos
+    // Retorna o JSON que a Omie enviou
     return {
       statusCode: 200,
-      body: JSON.stringify(data), // Retorna o que a Omie mandar
+      body: JSON.stringify(data),
     };
   } catch (error) {
     return {
