@@ -2,62 +2,84 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Listar Produtos (Básico)</title>
+  <title>Listar TODOS Produtos da Omie</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 8px; border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <h1>Listar Produtos Omie</h1>
-  <button id="btnBuscar">Buscar Lista de Produtos</button>
-  <div id="resultado"></div>
+  <button id="btnBuscar">Buscar Todos Produtos</button>
+  <p id="status"></p>
+  <table id="tabela-resultados">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Descrição Detalhada</th>
+        <th>Observações Internas</th>
+        <th>Tipo Item</th>
+        <th>Unidade</th>
+        <th>NCM</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
     const btnBuscar = document.getElementById("btnBuscar");
-    const resultadoEl = document.getElementById("resultado");
+    const statusEl = document.getElementById("status");
+    const tbodyEl = document.querySelector("#tabela-resultados tbody");
 
     btnBuscar.addEventListener("click", async () => {
-      resultadoEl.textContent = "Carregando...";
+      statusEl.textContent = "Carregando...";
+      tbodyEl.innerHTML = "";
+
       try {
-        const resp = await fetch("/.netlify/functions/listarProdutos");
-        if (!resp.ok) {
-          throw new Error("Erro ao chamar a função serverless: " + resp.statusText);
+        const response = await fetch("/.netlify/functions/listarTodosProdutos");
+        if (!response.ok) {
+          throw new Error("Erro ao chamar função serverless");
         }
+        const data = await response.json();
         
-        const data = await resp.json();
-        
-        // Se houve falha no retorno, data pode ter { error: "...", faultstring: "..." }
-        if (data.error) {
-          resultadoEl.textContent = "Erro: " + data.error;
-          return;
-        }
-        if (data.faultstring) {
-          // Se a Omie retornou algo como "Fault"
-          resultadoEl.textContent = "Erro Omie: " + data.faultstring;
+        const produtos = data.todosProdutos; 
+        if (!produtos || produtos.length === 0) {
+          statusEl.textContent = "Nenhum produto encontrado.";
           return;
         }
 
-        // data deve ter { pagina, total_de_paginas, registros, produto_servico_cadastro: [...], etc }
-        // Se for modo resumido, seria data.produto_servico_resumido
-        // Mas aqui, ListarProdutos retorna "produto_servico_cadastro" em "produto_servico_listfull_response"
-        
-        const produtos = data.produto_servico_cadastro || [];
-        if (produtos.length === 0) {
-          resultadoEl.textContent = "Nenhum produto encontrado (página 1).";
-          return;
-        }
+        statusEl.textContent = `Total de produtos: ${produtos.length}`;
 
-        // Monta uma lista simples exibindo 'codigo' e 'descricao'
-        let html = `<p>Página: ${data.pagina} de ${data.total_de_paginas} (Total de ${data.total_de_registros} registros)</p>`;
-        html += "<ul>";
-        produtos.forEach((prod) => {
-          const codigo = prod.codigo || "";
-          const descricao = prod.descricao || "";
-          html += `<li>${codigo} - ${descricao}</li>`;
+        // Monta as linhas da tabela
+        let htmlRows = "";
+        produtos.forEach((item) => {
+          const codigo          = item.codigo          || "";
+          const descricao       = item.descricao       || "";
+          const descrDetalhada  = item.descr_detalhada || "";
+          const obsInternas     = item.obs_internas    || "";
+          const tipoItem        = item.tipoItem        || "";
+          const unidade         = item.unidade         || "";
+          const ncm             = item.ncm             || "";
+
+          htmlRows += `
+            <tr>
+              <td>${codigo}</td>
+              <td>${descricao}</td>
+              <td>${descrDetalhada}</td>
+              <td>${obsInternas}</td>
+              <td>${tipoItem}</td>
+              <td>${unidade}</td>
+              <td>${ncm}</td>
+            </tr>
+          `;
         });
-        html += "</ul>";
-        
-        resultadoEl.innerHTML = html;
 
-      } catch (err) {
-        resultadoEl.textContent = "Ocorreu um erro: " + err.message;
+        tbodyEl.innerHTML = htmlRows;
+
+      } catch (error) {
+        console.error(error);
+        statusEl.textContent = "Erro: " + error.message;
       }
     });
   </script>
