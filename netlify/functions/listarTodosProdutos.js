@@ -18,9 +18,7 @@ exports.handler = async (event, context) => {
             // Se tiver milhares, talvez precise paginar muitas vezes.
             registros_por_pagina: 50,
             apenas_importado_api: "N",
-            filtrar_apenas_omiepdv: "N",
-            // Se quiser ver o conteúdo detalhado e observações, você pode marcar:
-            exibir_obs: "S"
+            filtrar_apenas_omiepdv: "N"
           }
         ],
         app_key: appKey,
