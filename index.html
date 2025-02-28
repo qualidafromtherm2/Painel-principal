@@ -1,73 +1,63 @@
-@@ -1 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Consulta de Produtos Omie</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #lista { margin-top: 10px; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Listar Produtos (Básico)</title>
 </head>
 <body>
-  <h1>Buscar Produtos da Omie</h1>
+  <h1>Listar Produtos Omie</h1>
   <button id="btnBuscar">Buscar Lista de Produtos</button>
-  <div id="lista"></div>
+  <div id="resultado"></div>
 
   <script>
-    const btnBuscar = document.getElementById('btnBuscar');
-    const listaDiv = document.getElementById('lista');
+    const btnBuscar = document.getElementById("btnBuscar");
+    const resultadoEl = document.getElementById("resultado");
 
-    btnBuscar.addEventListener('click', async () => {
-      listaDiv.textContent = "Carregando...";
-
+    btnBuscar.addEventListener("click", async () => {
+      resultadoEl.textContent = "Carregando...";
       try {
-        // Chamando a função serverless no Netlify
-        const response = await fetch('/.netlify/functions/listarProdutos');
-        if (!response.ok) {
-          throw new Error(`Erro ao chamar a função: ${response.statusText}`);
+        const resp = await fetch("/.netlify/functions/listarProdutos");
+        if (!resp.ok) {
+          throw new Error("Erro ao chamar a função serverless: " + resp.statusText);
         }
-
-        const data = await response.json();
         
-        // Supondo que a Omie retorna algo como "produtoCadastro", "total_de_registros", etc.
-        // Veja a doc da Omie (provavelmente data.produtos_cadastro ou data.listaProdutos)
+        const data = await resp.json();
+        
+        // Se houve falha no retorno, data pode ter { error: "...", faultstring: "..." }
         if (data.error) {
-          listaDiv.textContent = "Erro: " + data.error;
+          resultadoEl.textContent = "Erro: " + data.error;
+          return;
+        }
+        if (data.faultstring) {
+          // Se a Omie retornou algo como "Fault"
+          resultadoEl.textContent = "Erro Omie: " + data.faultstring;
           return;
         }
 
-        // Exemplo: se a resposta vem em data.produtos, itere sobre eles:
-        // A estrutura de retorno da Omie (ListarProdutos) costuma ser "produtosCadastro"
-        // com um array de objetos. Vamos supor:
-        // {
-        //   "pagina":1,
-        //   "total_de_paginas":1,
-        //   "registros_por_pagina":50,
-        //   "total_de_registros": 10,
-        //   "produtosCadastro":[
-        //       {"codigo_produto": "...", "descricao": "...", ...},
-        //       ...
-        //   ]
-        // }
+        // data deve ter { pagina, total_de_paginas, registros, produto_servico_cadastro: [...], etc }
+        // Se for modo resumido, seria data.produto_servico_resumido
+        // Mas aqui, ListarProdutos retorna "produto_servico_cadastro" em "produto_servico_listfull_response"
         
-        const produtos = data.produtosCadastro;
-        if (!produtos || produtos.length === 0) {
-          listaDiv.textContent = "Nenhum produto encontrado.";
+        const produtos = data.produto_servico_cadastro || [];
+        if (produtos.length === 0) {
+          resultadoEl.textContent = "Nenhum produto encontrado (página 1).";
           return;
         }
 
-        // Monta HTML com a lista de produtos
-        let html = "<ul>";
-        produtos.forEach(prod => {
-          html += `<li> Código: ${prod.codigo_produto} | Descrição: ${prod.descricao} </li>`;
+        // Monta uma lista simples exibindo 'codigo' e 'descricao'
+        let html = `<p>Página: ${data.pagina} de ${data.total_de_paginas} (Total de ${data.total_de_registros} registros)</p>`;
+        html += "<ul>";
+        produtos.forEach((prod) => {
+          const codigo = prod.codigo || "";
+          const descricao = prod.descricao || "";
+          html += `<li>${codigo} - ${descricao}</li>`;
         });
         html += "</ul>";
+        
+        resultadoEl.innerHTML = html;
 
-        listaDiv.innerHTML = html;
-      } catch (error) {
-        console.error(error);
-        listaDiv.textContent = "Ocorreu um erro ao buscar produtos.";
+      } catch (err) {
+        resultadoEl.textContent = "Ocorreu um erro: " + err.message;
       }
     });
   </script>
