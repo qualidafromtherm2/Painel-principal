@@ -1,92 +1,75 @@
+@@ -1 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <title>Listar Produtos - Paginação</title>
+  <meta charset="UTF-8">
+  <title>Consulta de Produtos Omie</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #lista { margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <h1>Lista de Produtos (Paginação)</h1>
-  
-  <!-- Botões e área de resultados -->
-  <button id="btnCarregar">Carregar Página</button>
-  <button id="btnAnterior">Anterior</button>
-  <button id="btnProxima">Próxima</button>
-
-  <div id="info"></div>
+  <h1>Buscar Produtos da Omie</h1>
+  <button id="btnBuscar">Buscar Lista de Produtos</button>
   <div id="lista"></div>
-  
+
   <script>
-    let paginaAtual = 1;
-    let totalPaginas = 1;
+    const btnBuscar = document.getElementById('btnBuscar');
+    const listaDiv = document.getElementById('lista');
 
-    const infoEl = document.getElementById("info");
-    const listaEl = document.getElementById("lista");
+    btnBuscar.addEventListener('click', async () => {
+      listaDiv.textContent = "Carregando...";
 
-    const btnCarregar = document.getElementById("btnCarregar");
-    const btnAnterior = document.getElementById("btnAnterior");
-    const btnProxima = document.getElementById("btnProxima");
-
-    btnCarregar.addEventListener("click", () => {
-      paginaAtual = 1;
-      carregarPagina(paginaAtual);
-    });
-
-    btnAnterior.addEventListener("click", () => {
-      if (paginaAtual > 1) {
-        paginaAtual--;
-        carregarPagina(paginaAtual);
-      }
-    });
-
-    btnProxima.addEventListener("click", () => {
-      if (paginaAtual < totalPaginas) {
-        paginaAtual++;
-        carregarPagina(paginaAtual);
-      }
-    });
-
-    async function carregarPagina(pagina) {
-      infoEl.textContent = `Carregando página ${pagina}...`;
-      listaEl.innerHTML = "";
       try {
-        const resp = await fetch(`/.netlify/functions/listarProdutosPaginado?pagina=${pagina}`);
-        if (!resp.ok) {
-          throw new Error("Erro ao chamar a função serverless");
+        // Chamando a função serverless no Netlify
+        const response = await fetch('/.netlify/functions/listarProdutos');
+        if (!response.ok) {
+          throw new Error(`Erro ao chamar a função: ${response.statusText}`);
         }
-        const data = await resp.json();
-        
-        // A API Omie normalmente retorna algo como:
-        // {
-        //   "pagina": 1,
-        //   "total_de_paginas": 10,
-        //   "registros": 50,
-        //   "total_de_registros": 500,
-        //   "produto_servico_cadastro": [ ... ]
-        // }
-        paginaAtual = data.pagina;
-        totalPaginas = data.total_de_paginas;
 
-        const produtos = data.produto_servico_cadastro || [];
-        if (produtos.length === 0) {
-          infoEl.textContent = "Nenhum produto encontrado para essa página.";
+        const data = await response.json();
+        
+        // Supondo que a Omie retorna algo como "produtoCadastro", "total_de_registros", etc.
+        // Veja a doc da Omie (provavelmente data.produtos_cadastro ou data.listaProdutos)
+        if (data.error) {
+          listaDiv.textContent = "Erro: " + data.error;
           return;
         }
 
-        infoEl.textContent = `Página ${data.pagina} de ${data.total_de_paginas} | ${data.total_de_registros} produtos no total.`;
+        // Exemplo: se a resposta vem em data.produtos, itere sobre eles:
+        // A estrutura de retorno da Omie (ListarProdutos) costuma ser "produtosCadastro"
+        // com um array de objetos. Vamos supor:
+        // {
+        //   "pagina":1,
+        //   "total_de_paginas":1,
+        //   "registros_por_pagina":50,
+        //   "total_de_registros": 10,
+        //   "produtosCadastro":[
+        //       {"codigo_produto": "...", "descricao": "...", ...},
+        //       ...
+        //   ]
+        // }
+        
+        const produtos = data.produtosCadastro;
+        if (!produtos || produtos.length === 0) {
+          listaDiv.textContent = "Nenhum produto encontrado.";
+          return;
+        }
 
-        // Montar HTML dos itens
-        const itensHtml = produtos.map((item) => {
-          // Exemplo: mostrando apenas "codigo" e "descricao"
-          const codigo = item.codigo || "";
-          const descricao = item.descricao || "";
-          return `<li><strong>${codigo}</strong> - ${descricao}</li>`;
-        }).join("");
+        // Monta HTML com a lista de produtos
+        let html = "<ul>";
+        produtos.forEach(prod => {
+          html += `<li> Código: ${prod.codigo_produto} | Descrição: ${prod.descricao} </li>`;
+        });
+        html += "</ul>";
 
-        listaEl.innerHTML = `<ul>${itensHtml}</ul>`;
-      } catch (err) {
-        infoEl.textContent = "Erro: " + err.message;
+        listaDiv.innerHTML = html;
+      } catch (error) {
+        console.error(error);
+        listaDiv.textContent = "Ocorreu um erro ao buscar produtos.";
       }
-    }
+    });
   </script>
 </body>
 </html>
