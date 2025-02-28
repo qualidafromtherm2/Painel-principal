@@ -1,42 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <title>Listar Produtos Omie</title>
+  <meta charset="UTF-8" />
+  <title>Listar TODOS Produtos da Omie</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 8px; border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <button id="btnBuscar">Buscar Lista de Produtos</button>
-  <div id="lista"></div>
+  <button id="btnBuscar">Buscar Todos Produtos</button>
+  <p id="status"></p>
+  <table id="tabela-resultados">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Descrição Detalhada</th>
+        <th>Observações Internas</th>
+        <th>Tipo Item</th>
+        <th>Unidade</th>
+        <th>NCM</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    document.getElementById("btnBuscar").addEventListener("click", async () => {
-      const listaDiv = document.getElementById("lista");
-      listaDiv.textContent = "Carregando...";
-      try {
-        const resp = await fetch("/.netlify/functions/listarProdutos");
-        const data = await resp.json();
+    const btnBuscar = document.getElementById("btnBuscar");
+    const statusEl = document.getElementById("status");
+    const tbodyEl = document.querySelector("#tabela-resultados tbody");
 
-        // Ver se há 'produto_servico_resumido' ou 'produto_servico_cadastro'
-        if (data.produto_servico_resumido && data.produto_servico_resumido.length > 0) {
-          // Exemplo no modo resumido
-          const itens = data.produto_servico_resumido.map(
-            (item) => `<li>${item.codigo} - ${item.descricao}</li>`
-          );
-          listaDiv.innerHTML = `<ul>${itens.join("")}</ul>`;
+    btnBuscar.addEventListener("click", async () => {
+      statusEl.textContent = "Carregando...";
+      tbodyEl.innerHTML = "";
+
+      try {
+        const response = await fetch("/.netlify/functions/listarTodosProdutos");
+        if (!response.ok) {
+          throw new Error("Erro ao chamar função serverless");
         }
-        else if (data.produto_servico_cadastro && data.produto_servico_cadastro.length > 0) {
-          // Exemplo no modo completo
-          const itens = data.produto_servico_cadastro.map(
-            (item) => `<li>${item.codigo} - ${item.descricao}</li>`
-          );
-          listaDiv.innerHTML = `<ul>${itens.join("")}</ul>`;
+        const data = await response.json();
+        
+        const produtos = data.todosProdutos; 
+        if (!produtos || produtos.length === 0) {
+          statusEl.textContent = "Nenhum produto encontrado.";
+          return;
         }
-        else {
-          listaDiv.textContent = "Nenhum produto encontrado.";
-        }
-      } catch (err) {
-        console.error(err);
-        listaDiv.textContent = "Erro ao buscar: " + err.message;
+
+        statusEl.textContent = `Total de produtos: ${produtos.length}`;
+
+        // Monta as linhas da tabela
+        let htmlRows = "";
+        produtos.forEach((item) => {
+          const codigo          = item.codigo          || "";
+          const descricao       = item.descricao       || "";
+          const descrDetalhada  = item.descr_detalhada || "";
+          const obsInternas     = item.obs_internas    || "";
+          const tipoItem        = item.tipoItem        || "";
+          const unidade         = item.unidade         || "";
+          const ncm             = item.ncm             || "";
+
+          htmlRows += `
+            <tr>
+              <td>${codigo}</td>
+              <td>${descricao}</td>
+              <td>${descrDetalhada}</td>
+              <td>${obsInternas}</td>
+              <td>${tipoItem}</td>
+              <td>${unidade}</td>
+              <td>${ncm}</td>
+            </tr>
+          `;
+        });
+
+        tbodyEl.innerHTML = htmlRows;
+
+      } catch (error) {
+        console.error(error);
+        statusEl.textContent = "Erro: " + error.message;
       }
     });
   </script>
