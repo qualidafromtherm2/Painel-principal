@@ -1,0 +1,6 @@
+[build]
+  functions = "netlify/functions"
+
+# Se você tiver um build command (ex: npm run build), configure aqui:
+# command = "npm run build"
+# publish = "dist"
