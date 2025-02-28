@@ -1,87 +1,92 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Listar TODOS Produtos da Omie</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { padding: 8px; border: 1px solid #ccc; }
-  </style>
+  <meta charset="utf-8">
+  <title>Listar Produtos - Paginação</title>
 </head>
 <body>
-  <button id="btnBuscar">Buscar Todos Produtos</button>
-  <p id="status"></p>
-  <table id="tabela-resultados">
-    <thead>
-      <tr>
-        <th>Código</th>
-        <th>Descrição</th>
-        <th>Descrição Detalhada</th>
-        <th>Observações Internas</th>
-        <th>Tipo Item</th>
-        <th>Unidade</th>
-        <th>NCM</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h1>Lista de Produtos (Paginação)</h1>
+  
+  <!-- Botões e área de resultados -->
+  <button id="btnCarregar">Carregar Página</button>
+  <button id="btnAnterior">Anterior</button>
+  <button id="btnProxima">Próxima</button>
 
+  <div id="info"></div>
+  <div id="lista"></div>
+  
   <script>
-    const btnBuscar = document.getElementById("btnBuscar");
-    const statusEl = document.getElementById("status");
-    const tbodyEl = document.querySelector("#tabela-resultados tbody");
+    let paginaAtual = 1;
+    let totalPaginas = 1;
 
-    btnBuscar.addEventListener("click", async () => {
-      statusEl.textContent = "Carregando...";
-      tbodyEl.innerHTML = "";
+    const infoEl = document.getElementById("info");
+    const listaEl = document.getElementById("lista");
 
+    const btnCarregar = document.getElementById("btnCarregar");
+    const btnAnterior = document.getElementById("btnAnterior");
+    const btnProxima = document.getElementById("btnProxima");
+
+    btnCarregar.addEventListener("click", () => {
+      paginaAtual = 1;
+      carregarPagina(paginaAtual);
+    });
+
+    btnAnterior.addEventListener("click", () => {
+      if (paginaAtual > 1) {
+        paginaAtual--;
+        carregarPagina(paginaAtual);
+      }
+    });
+
+    btnProxima.addEventListener("click", () => {
+      if (paginaAtual < totalPaginas) {
+        paginaAtual++;
+        carregarPagina(paginaAtual);
+      }
+    });
+
+    async function carregarPagina(pagina) {
+      infoEl.textContent = `Carregando página ${pagina}...`;
+      listaEl.innerHTML = "";
       try {
-        const response = await fetch("/.netlify/functions/listarTodosProdutos");
-        if (!response.ok) {
-          throw new Error("Erro ao chamar função serverless");
+        const resp = await fetch(`/.netlify/functions/listarProdutosPaginado?pagina=${pagina}`);
+        if (!resp.ok) {
+          throw new Error("Erro ao chamar a função serverless");
         }
-        const data = await response.json();
+        const data = await resp.json();
         
-        const produtos = data.todosProdutos; 
-        if (!produtos || produtos.length === 0) {
-          statusEl.textContent = "Nenhum produto encontrado.";
+        // A API Omie normalmente retorna algo como:
+        // {
+        //   "pagina": 1,
+        //   "total_de_paginas": 10,
+        //   "registros": 50,
+        //   "total_de_registros": 500,
+        //   "produto_servico_cadastro": [ ... ]
+        // }
+        paginaAtual = data.pagina;
+        totalPaginas = data.total_de_paginas;
+
+        const produtos = data.produto_servico_cadastro || [];
+        if (produtos.length === 0) {
+          infoEl.textContent = "Nenhum produto encontrado para essa página.";
           return;
         }
 
-        statusEl.textContent = `Total de produtos: ${produtos.length}`;
+        infoEl.textContent = `Página ${data.pagina} de ${data.total_de_paginas} | ${data.total_de_registros} produtos no total.`;
 
-        // Monta as linhas da tabela
-        let htmlRows = "";
-        produtos.forEach((item) => {
-          const codigo          = item.codigo          || "";
-          const descricao       = item.descricao       || "";
-          const descrDetalhada  = item.descr_detalhada || "";
-          const obsInternas     = item.obs_internas    || "";
-          const tipoItem        = item.tipoItem        || "";
-          const unidade         = item.unidade         || "";
-          const ncm             = item.ncm             || "";
+        // Montar HTML dos itens
+        const itensHtml = produtos.map((item) => {
+          // Exemplo: mostrando apenas "codigo" e "descricao"
+          const codigo = item.codigo || "";
+          const descricao = item.descricao || "";
+          return `<li><strong>${codigo}</strong> - ${descricao}</li>`;
+        }).join("");
 
-          htmlRows += `
-            <tr>
-              <td>${codigo}</td>
-              <td>${descricao}</td>
-              <td>${descrDetalhada}</td>
-              <td>${obsInternas}</td>
-              <td>${tipoItem}</td>
-              <td>${unidade}</td>
-              <td>${ncm}</td>
-            </tr>
-          `;
-        });
-
-        tbodyEl.innerHTML = htmlRows;
-
-      } catch (error) {
-        console.error(error);
-        statusEl.textContent = "Erro: " + error.message;
+        listaEl.innerHTML = `<ul>${itensHtml}</ul>`;
+      } catch (err) {
+        infoEl.textContent = "Erro: " + err.message;
       }
-    });
+    }
   </script>
 </body>
 </html>
